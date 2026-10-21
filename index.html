@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- Apple iPhone Native WebApp Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Kronos Quant" />
+  <title>KRONOS FORECAST — Institutional Terminal & iPhone App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0b0e14;
+      --bg-panel: #10141d;
+      --bg-elevated: #151a26;
+      --border-hairline: #1f2637;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+    }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .quant-panel {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-hairline);
+    }
+    .quant-subpanel {
+      background-color: var(--bg-elevated);
+      border: 1px solid var(--border-hairline);
+    }
+    .quant-input {
+      background-color: #131822;
+      border: 1px solid #262f45;
+      color: #e2e8f0;
+    }
+    .quant-input:focus {
+      border-color: #64748b;
+      outline: none;
+    }
+    .label-caps {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: #64748b;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0b0e14; }
+    ::-webkit-scrollbar-thumb { background: #262f45; }
+  </style>
+</head>
+<body class="min-h-screen pb-12">
+
+  <!-- BARRA SUPERIOR -->
+  <header class="sticky top-0 z-30 border-b border-[#1f2637] bg-[#0b0e14]/95 backdrop-blur-sm">
+    <div class="max-w-[1600px] mx-auto px-3 md:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span class="font-mono-num font-bold text-sm md:text-base tracking-wider text-white">KRONOS FORECAST</span>
+          <span id="headerSubInfo" class="font-mono-num text-xs text-slate-400">BTCUSDT · 1h · Binance</span>
+        </div>
+        <div class="hidden md:flex items-center gap-2 text-xs font-mono-num text-slate-300 ml-3 pl-3 border-l border-slate-800">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+          <span id="liveHeaderTag">live · Kronos-mini · 24 samples</span>
+        </div>
+      </div>
+
+      <!-- Controles + Botón Conectar iPhone -->
+      <div class="flex flex-wrap items-center gap-2">
+        <select id="symbolSelect" onchange="runAnalysis()" class="quant-input text-xs font-mono-num px-2.5 py-1.5 rounded-sm">
+          <optgroup label="Mercados Cripto (Binance)">
+            <option value="BTCUSDT" selected>BTCUSDT</option>
+            <option value="ETHUSDT">ETHUSDT</option>
+            <option value="XRPUSDT">XRPUSDT (Ripple)</option>
+            <option value="SOLUSDT">SOLUSDT</option>
+            <option value="BNBUSDT">BNBUSDT</option>
+            <option value="PAXGUSDT">PAXGUSDT (Oro)</option>
+          </optgroup>
+          <optgroup label="Índices y Acciones (Yahoo)">
+            <option value="^GSPC">S&P 500 (^GSPC)</option>
+            <option value="^IXIC">Nasdaq (^IXIC)</option>
+            <option value="GC=F">Oro Futuros (GC=F)</option>
+            <option value="NVDA">NVIDIA (NVDA)</option>
+          </optgroup>
+        </select>
+
+        <select id="intervalSelect" onchange="runAnalysis()" class="quant-input text-xs font-mono-num px-2 py-1.5 rounded-sm">
+          <option value="5m">5m</option>
+          <option value="15m">15m</option>
+          <option value="1h" selected>1h</option>
+          <option value="4h">4h</option>
+          <option value="1d">1d</option>
+        </select>
+
+        <select id="predLenSelect" onchange="runAnalysis()" class="quant-input text-xs font-mono-num px-2 py-1.5 rounded-sm">
+          <option value="16">16 velas</option>
+          <option value="24" selected>24 velas</option>
+          <option value="32">32 velas</option>
+        </select>
+
+        <select id="modelSizeSelect" onchange="runAnalysis()" class="quant-input text-xs font-mono-num px-2 py-1.5 rounded-sm">
+          <option value="mini" selected>Kronos-mini (4.1M)</option>
+          <option value="small">Kronos-small (24.7M)</option>
+        </select>
+
+        <button onclick="resetChartZoom()" title="Centrar vista del gráfico" class="quant-input hover:border-slate-500 text-slate-300 font-mono-num text-xs px-2.5 py-1.5 rounded-sm transition">
+          ⛶ CENTRAR
+        </button>
+
+        <button onclick="openIphoneModal()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-600 font-mono-num text-xs px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition">
+          <span>📲 CONECTAR IPHONE</span>
+        </button>
+
+        <button id="analyzeBtn" onclick="runAnalysis()" class="bg-zinc-100 hover:bg-zinc-300 text-zinc-950 font-mono-num font-semibold text-xs px-3.5 py-1.5 rounded-sm flex items-center gap-1.5 transition">
+          <span id="btnSpinner" class="hidden animate-spin h-3 w-3 border-2 border-zinc-900 border-t-transparent rounded-full"></span>
+          <span id="btnText">ACTUALIZAR</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1600px] mx-auto px-3 md:px-5 mt-3 space-y-3">
+
+    <!-- FILA 1: GRÁFICO INTERACTIVO KRONOS FORECAST (TRADINGVIEW + MONTE CARLO FAN) + CONSOLA PAPER TRADING -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      
+      <!-- IZQUIERDA (8 cols): GRÁFICO INTERACTIVO DESPLAZABLE Y CON ZOOM -->
+      <div class="lg:col-span-8 quant-panel rounded-sm p-3 relative">
+        
+        <!-- Caja Flotante Superior Izquierda (pointer-events-none para no bloquear el arrastre del gráfico debajo) -->
+        <div class="
+          md:absolute md:top-6 md:left-6 z-20 pointer-events-none
+          bg-[#0d111a]/90 border border-[#262f45] rounded-md p-3 mb-2 md:mb-0
+          font-mono-num text-xs w-full md:w-56 backdrop-blur-md shadow-xl
+        ">
+          <div id="overlayModelTitle" class="font-bold text-slate-100 pb-1.5 mb-1.5 border-b border-slate-800">
+            Kronos-mini · 4.1M params
+          </div>
+          <div class="space-y-1 text-[11px]">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Context</span>
+              <span id="overlayContext" class="text-slate-200 font-semibold">360 candles</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Horizon</span>
+              <span id="overlayHorizon" class="text-slate-200 font-semibold">next 24 candles</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Samples</span>
+              <span id="overlaySamples" class="text-slate-200 font-semibold">24 futures</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Paths up</span>
+              <span id="overlayPathsUp" class="text-slate-200 font-semibold">-- / 24</span>
+            </div>
+            <div class="flex justify-between pt-0.5">
+              <span class="text-slate-400">Regime</span>
+              <span id="overlayRegime" class="font-bold text-amber-400">CHOPPY</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenedor Interactivo TradingView Lightweight Charts (Arrastrar + Rueda/Pinch Zoom) -->
+        <div id="tvChartContainer" class="w-full h-[430px] md:h-[490px] relative cursor-grab active:cursor-grabbing"></div>
+      </div>
+
+      <!-- DERECHA (4 cols): CONSOLA PAPER TRADING (`run_kronos.py`) + DICTAMEN DE SEÑAL -->
+      <div class="lg:col-span-4 flex flex-col gap-3">
+        
+        <!-- Ventana de Terminal `run_kronos.py` (WIN / LOSS / skip) -->
+        <div class="quant-panel rounded-sm p-3.5 flex-1 flex flex-col justify-between bg-[#0a0d13]">
+          <div>
+            <div class="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-800/80 font-mono-num text-xs">
+              <span class="text-emerald-400">$ python run_kronos.py vendor/Kronos</span>
+              <span class="text-[10px] text-slate-500">PAPER SIM</span>
+            </div>
+
+            <div id="paperLogContainer" class="font-mono-num text-[11px] space-y-1.5 overflow-x-auto">
+              <!-- Rellenado dinámicamente con WIN / LOSS / skip -->
+            </div>
+          </div>
+
+          <div class="mt-3 pt-2.5 border-t border-slate-800/80 font-mono-num text-xs space-y-1">
+            <div id="paperSummaryLine" class="text-slate-100 font-semibold">
+              híbrido -- trades · -- wins · equity $10,000.00
+            </div>
+            <div id="paperRawSummaryLine" class="text-slate-400 text-[11px]">
+              kronos puro -- trades · -- wins · equity $10,000.00
+            </div>
+            <div class="text-emerald-400 text-[11px] flex items-center justify-between pt-0.5">
+              <span>done · neural batch verified</span>
+              <button onclick="sendCurrentAlertToIphone()" class="underline text-amber-300 hover:text-amber-200">
+                [Enviar señal al iPhone]
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta de Señal Maestra + Take-Profit / Stop-Loss -->
+        <div class="quant-panel rounded-sm p-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="label-caps">SEÑAL HÍBRIDA (KRONOS + NOTICIAS)</span>
+            <span id="confidenceBadge" class="font-mono-num text-[11px] text-slate-400">CONFIANZA: --%</span>
+          </div>
+
+          <div class="mt-2.5 flex items-baseline justify-between">
+            <div id="signalAction" class="font-mono-num text-lg md:text-xl font-bold text-white">
+              ANALIZANDO...
+            </div>
+            <span id="signalScoreTag" class="font-mono-num text-xs text-slate-400">SCORE: --</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-slate-800/80 font-mono-num">
+            <div class="quant-subpanel p-2 rounded-sm">
+              <div class="text-[10px] text-slate-400">SPOT</div>
+              <div id="currentPriceVal" class="text-xs md:text-sm font-bold text-white mt-0.5">--</div>
+            </div>
+            <div class="quant-subpanel p-2 rounded-sm border-l-2 border-l-emerald-500">
+              <div class="text-[10px] text-slate-400">TAKE-PROFIT (P90)</div>
+              <div id="tpPriceVal" class="text-xs md:text-sm font-bold text-emerald-400 mt-0.5">--</div>
+            </div>
+            <div class="quant-subpanel p-2 rounded-sm border-l-2 border-l-rose-500">
+              <div class="text-[10px] text-slate-400">STOP-LOSS (P10)</div>
+              <div id="slPriceVal" class="text-xs md:text-sm font-bold text-rose-400 mt-0.5">--</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FILA 2: DETECTOR DE TRAMPAS DE MASA + INDICADORES TÉCNICOS + SENTIMIENTO -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      
+      <!-- Detector de Trampas de la Masa -->
+      <div class="lg:col-span-6 quant-panel rounded-sm p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="label-caps">AUDITORÍA DE FLUJO: SMART MONEY VS. SENTIMIENTO DE MASA</span>
+            <span id="crowdSentimentBadge" class="font-mono-num text-[11px] text-slate-400">SENTIMIENTO: --</span>
+          </div>
+          <h3 id="trapTitle" class="text-sm font-semibold text-white mt-2.5">--</h3>
+          <p id="trapExplanation" class="text-xs text-slate-400 mt-1 leading-relaxed">--</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mt-3 pt-2.5 border-t border-slate-800 font-mono-num text-[11px]">
+          <div>
+            <div class="flex justify-between text-slate-400 mb-1">
+              <span>Absorción Inf.</span>
+              <span id="absorptionVal" class="text-emerald-400 font-semibold">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-900 border border-slate-800">
+              <div id="absorptionBar" class="h-full bg-emerald-500" style="width:0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-slate-400 mb-1">
+              <span>Distribución Sup.</span>
+              <span id="distributionVal" class="text-rose-400 font-semibold">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-900 border border-slate-800">
+              <div id="distributionBar" class="h-full bg-rose-500" style="width:0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-slate-400 mb-1">
+              <span>Pico Volumen</span>
+              <span id="volSpikeVal" class="text-slate-200 font-semibold">1.0x</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-900 border border-slate-800">
+              <div id="volSpikeBar" class="h-full bg-slate-400" style="width:30%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicadores Técnicos & Fear and Greed -->
+      <div class="lg:col-span-6 quant-panel rounded-sm p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+            <span class="label-caps">INDICADORES DE ESTRUCTURA (TRADINGVIEW) & ÍNDICE MIEDO/CODICIA</span>
+            <span id="tvRatingBadge" class="font-mono-num text-[11px] font-semibold px-2 py-0.5 bg-slate-900 border border-slate-700 text-slate-200 rounded-sm">--</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono-num text-xs">
+            <div class="quant-subpanel p-2 rounded-sm">
+              <span class="text-slate-500 text-[10px] block">RSI (14)</span>
+              <span id="tvRsiVal" class="font-semibold text-white">--</span>
+            </div>
+            <div class="quant-subpanel p-2 rounded-sm">
+              <span class="text-slate-500 text-[10px] block">MACD HIST</span>
+              <span id="tvMacdVal" class="font-semibold text-white">--</span>
+            </div>
+            <div class="quant-subpanel p-2 rounded-sm">
+              <span class="text-slate-500 text-[10px] block">EMA 20</span>
+              <span id="tvEma20Val" class="font-semibold text-white">--</span>
+            </div>
+            <div class="quant-subpanel p-2 rounded-sm">
+              <span class="text-slate-500 text-[10px] block">FEAR & GREED</span>
+              <span id="fgValueBadge" class="font-semibold text-amber-400">-- / 100</span>
+            </div>
+          </div>
+        </div>
+
+        <ul id="tvDetailsList" class="mt-3 pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-1 font-mono-num text-[11px] text-slate-400"></ul>
+      </div>
+
+    </div>
+
+    <!-- FILA 3: GEMELOS HISTÓRICOS (FECHA + VELA + NOTICIA) & PRENSA EN VIVO -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      <div class="lg:col-span-7 quant-panel rounded-sm p-4">
+        <div class="border-b border-slate-800 pb-2 mb-3">
+          <span class="label-caps">MEMORIA HISTÓRICA: EVENTOS GEMELOS (FECHA + VELA + NOTICIA)</span>
+        </div>
+        <div id="historicalTwinsContainer" class="space-y-2.5"></div>
+      </div>
+
+      <div class="lg:col-span-5 quant-panel rounded-sm p-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+          <span class="label-caps">CABLE DE NOTICIAS EN TIEMPO REAL</span>
+          <span id="newsScoreBadge" class="font-mono-num text-[11px] text-slate-400">SESGO: --</span>
+        </div>
+        <div id="newsListContainer" class="space-y-2 max-h-[380px] overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL DE CONEXIÓN CON IPHONE (QR WEBAPP + NOTIFICACIONES PUSH) -->
+  <div id="iphoneModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="quant-panel max-w-2xl w-full rounded-md p-5 border border-slate-700 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="label-caps text-amber-400">PUENTE MÓVIL IOS</span>
+          <h2 class="text-base font-bold text-white mt-0.5">Conectar Kronos Quant a tu iPhone</h2>
+        </div>
+        <button onclick="closeIphoneModal()" class="text-slate-400 hover:text-white font-mono-num text-sm px-2 py-1">✕ CERRAR</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="quant-subpanel p-4 rounded-sm flex flex-col items-center text-center">
+          <span class="label-caps text-emerald-400">1. INSTALAR TERMINAL EN TU IPHONE</span>
+          <p class="text-xs text-slate-300 mt-1.5">
+            Con tu iPhone conectado al mismo Wi-Fi que tu Mac, apunta con la <b>Cámara de tu iPhone</b> a este código QR:
+          </p>
+          <div class="bg-white p-2.5 rounded-md my-3">
+            <img id="qrWebAppImg" src="" alt="QR iPhone WebApp" class="w-36 h-36" />
+          </div>
+          <div id="iphoneUrlText" class="font-mono-num text-xs font-bold text-amber-300 select-all">
+            http://192.168.1.43:8765
+          </div>
+          <p class="text-[11px] text-slate-400 mt-2">
+            💡 En Safari del iPhone pulsa <b>Compartir → Añadir a pantalla de inicio</b> para tener el icono de la App a pantalla completa.
+          </p>
+        </div>
+
+        <div class="quant-subpanel p-4 rounded-sm flex flex-col justify-between">
+          <div>
+            <span class="label-caps text-amber-400">2. ALERTAS PUSH AL IPHONE (PANTALLA BLOQUEADA)</span>
+            <p class="text-xs text-slate-300 mt-1.5">
+              Para recibir avisos instantáneos en el iPhone sin configurar servidores:
+            </p>
+            <ol class="text-xs text-slate-300 mt-2 space-y-1.5 list-decimal list-inside">
+              <li>Descarga gratis la app <b>ntfy</b> en la App Store de tu iPhone.</li>
+              <li>Pulsa <b>"+"</b> en la app y suscríbete a tu canal privado:</li>
+            </ol>
+
+            <div class="mt-2">
+              <label class="text-[10px] font-mono-num text-slate-400 block mb-1">CANAL PRIVADO NTFY (PUEDES CAMBIARLO):</label>
+              <input id="ntfyTopicInput" type="text" class="quant-input w-full font-mono-num text-xs px-2.5 py-1.5 rounded-sm font-bold text-emerald-300" />
+            </div>
+
+            <div class="mt-3 pt-2.5 border-t border-slate-800">
+              <label class="text-[10px] font-mono-num text-slate-400 block mb-1">OPCIONAL: BOT DE TELEGRAM (TOKEN Y CHAT ID)</label>
+              <input id="tgTokenInput" type="password" placeholder="Telegram Bot Token (Opcional)" class="quant-input w-full font-mono-num text-xs px-2.5 py-1 rounded-sm mb-1.5" />
+              <input id="tgChatInput" type="text" placeholder="Telegram Chat ID (Opcional)" class="quant-input w-full font-mono-num text-xs px-2.5 py-1 rounded-sm" />
+            </div>
+
+            <label class="flex items-center gap-2 mt-2.5 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" id="autoPushToggle" class="accent-emerald-500" />
+              <span>Enviar alerta automática al iPhone en cada análisis</span>
+            </label>
+          </div>
+
+          <div class="flex flex-col gap-2 mt-4">
+            <button onclick="saveIphoneSettings()" class="bg-zinc-800 hover:bg-zinc-700 text-white font-mono-num text-xs py-1.5 rounded-sm border border-zinc-600">
+              GUARDAR CONFIGURACIÓN
+            </button>
+            <button id="testPushBtn" onclick="sendCurrentAlertToIphone()" class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono-num font-bold text-xs py-2 rounded-sm">
+              📲 ENVIAR ALERTA DE PRUEBA A MI IPHONE AHORA
+            </button>
+            <div id="pushStatusMsg" class="text-[11px] font-mono-num text-center text-slate-400"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lastAnalysisData = null;
+    let tvChart = null;
+    let histSeries = null;
+    let predSeries = null;
+    let mcLineSeriesList = [];
+    let activePriceLines = [];
+
+    function formatPrice(val) {
+      if (val === undefined || val === null) return '--';
+      const n = Number(val);
+      if (n >= 100) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return n.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    }
+
+    /**
+     * Inicializa el motor interactivo de TradingView Lightweight Charts
+     * con soporte total para arrastrar (pan), hacer zoom con rueda o pellizco (iPhone)
+     * y combina las 24 líneas del abanico Monte Carlo + velas blancas `med` de KRONOS FORECAST.
+     */
+    function initInteractiveChart() {
+      const container = document.getElementById('tvChartContainer');
+      container.innerHTML = '';
+
+      tvChart = LightweightCharts.createChart(container, {
+        layout: {
+          background: { type: 'solid', color: '#0b0e14' },
+          textColor: '#64748b',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 11,
+        },
+        grid: {
+          vertLines: { color: 'rgba(30, 41, 59, 0.35)' },
+          horzLines: { color: 'rgba(30, 41, 59, 0.35)' },
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+          vertLine: {
+            color: 'rgba(226, 232, 240, 0.4)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#1e293b',
+          },
+          horzLine: {
+            color: 'rgba(226, 232, 240, 0.4)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#1e293b',
+          },
+        },
+        rightPriceScale: {
+          borderColor: '#1f2637',
+          scaleMargins: { top: 0.1, bottom: 0.1 },
+        },
+        timeScale: {
+          borderColor: '#1f2637',
+          timeVisible: true,
+          secondsVisible: false,
+          rightOffset: 6,
+        },
+      });
+
+      // Pre-crear las 24 series de líneas blancas semitransparentes para el Abanico Monte Carlo
+      mcLineSeriesList = [];
+      for (let i = 0; i < 24; i++) {
+        const lineSeries = tvChart.addLineSeries({
+          color: 'rgba(226, 232, 240, 0.16)',
+          lineWidth: 1,
+          crosshairMarkerVisible: false,
+          lastValueVisible: false,
+          priceLineVisible: false,
+        });
+        mcLineSeriesList.push(lineSeries);
+      }
+
+      // Serie de Velas Históricas Reales (Teal #14b8a6 / Rojo #ef4444)
+      histSeries = tvChart.addCandlestickSeries({
+        upColor: '#14b8a6',
+        downColor: '#ef4444',
+        borderUpColor: '#14b8a6',
+        borderDownColor: '#ef4444',
+        wickUpColor: '#14b8a6',
+        wickDownColor: '#ef4444',
+      });
+
+      // Serie de Velas Medianas Predichas por Kronos (Blancas / Huecas `med`)
+      predSeries = tvChart.addCandlestickSeries({
+        upColor: '#f8fafc',
+        downColor: '#0b0e14',
+        borderUpColor: '#f8fafc',
+        borderDownColor: '#f8fafc',
+        wickUpColor: '#f8fafc',
+        wickDownColor: '#f8fafc',
+        lastValueVisible: false,
+        priceLineVisible: false,
+      });
+
+      window.addEventListener('resize', () => {
+        if (tvChart) {
+          tvChart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+        }
+      });
+    }
+
+    function resetChartZoom() {
+      if (!tvChart || !lastAnalysisData) return;
+      const hist = lastAnalysisData.historical_candles;
+      const preds = lastAnalysisData.kronos.predicted_candles;
+      if (hist.length > 0 && preds.length > 0) {
+        const fromIdx = Math.max(0, hist.length - 65);
+        tvChart.timeScale().setVisibleRange({
+          from: hist[fromIdx].time,
+          to: preds[preds.length - 1].time,
+        });
+      } else {
+        tvChart.timeScale().fitContent();
+      }
+    }
+
+    function updateInteractiveChart(data) {
+      if (!tvChart) initInteractiveChart();
+
+      const hist = data.historical_candles;
+      const preds = data.kronos.predicted_candles;
+      const mcPaths = data.kronos.monte_carlo_paths || [];
+
+      if (!hist || hist.length === 0) return;
+
+      // Ajustar precisión de decimales para activos como XRP ($0.50-$3.00) vs BTC ($84,000)
+      const lastClose = data.kronos.last_close;
+      const precision = lastClose < 50 ? 4 : 2;
+      const minMove = lastClose < 50 ? 0.0001 : 0.01;
+      histSeries.applyOptions({ priceFormat: { type: 'price', precision, minMove } });
+      predSeries.applyOptions({ priceFormat: { type: 'price', precision, minMove } });
+
+      // 1. Cargar todas las velas históricas (puedes arrastrar hacia la izquierda para ver las 250 velas)
+      histSeries.setData(hist);
+
+      // Marcar la vela actual con la flecha `NOW`
+      const lastBar = hist[hist.length - 1];
+      histSeries.setMarkers([
+        {
+          time: lastBar.time,
+          position: 'aboveBar',
+          color: '#e2e8f0',
+          shape: 'arrowDown',
+          text: 'NOW',
+        },
+      ]);
+
+      // 2. Cargar las velas medianas de Kronos (`med`)
+      predSeries.setData(preds);
+
+      // 3. Cargar las 24 trayectorias del Abanico Monte Carlo (conectadas desde el cierre de `lastBar`)
+      mcLineSeriesList.forEach((series, idx) => {
+        if (idx < mcPaths.length) {
+          const pathValues = mcPaths[idx];
+          const linePoints = [{ time: lastBar.time, value: lastBar.close }];
+          for (let t = 0; t < preds.length; t++) {
+            linePoints.push({
+              time: preds[t].time,
+              value: pathValues[t],
+            });
+          }
+          series.setData(linePoints);
+        } else {
+          series.setData([]);
+        }
+      });
+
+      // 4. Limpiar y crear las etiquetas de precio en el eje derecho (`p90`, `med`, `p10`, `Resistance`, `Support`)
+      activePriceLines.forEach(pl => histSeries.removePriceLine(pl));
+      activePriceLines = [];
+
+      // Calcular resistencia y soporte de las últimas 65 velas visibles
+      const recentHist = hist.slice(-65);
+      const maxRecentHigh = Math.max(...recentHist.map(c => c.high));
+      const minRecentLow = Math.min(...recentHist.map(c => c.low));
+
+      activePriceLines.push(
+        histSeries.createPriceLine({
+          price: data.kronos.p90_final,
+          color: '#475569',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'p90',
+        }),
+        histSeries.createPriceLine({
+          price: data.kronos.predicted_final_close,
+          color: '#f8fafc',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: 'med',
+        }),
+        histSeries.createPriceLine({
+          price: data.kronos.p10_final,
+          color: '#475569',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'p10',
+        }),
+        histSeries.createPriceLine({
+          price: maxRecentHigh,
+          color: 'rgba(148, 163, 184, 0.3)',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: false,
+          title: `Resistance ${formatPrice(maxRecentHigh)}`,
+        }),
+        histSeries.createPriceLine({
+          price: minRecentLow,
+          color: 'rgba(148, 163, 184, 0.3)',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: false,
+          title: `Low ${formatPrice(minRecentLow)}`,
+        })
+      );
+
+      // Enfocar inicialmente las últimas 65 velas + las predicciones futuras (pero permitiendo arrastrar libremente hacia atrás)
+      resetChartZoom();
+    }
+
+    async function runAnalysis() {
+      const symbol = document.getElementById('symbolSelect').value;
+      const interval = document.getElementById('intervalSelect').value;
+      const predLen = document.getElementById('predLenSelect').value;
+      const modelSize = document.getElementById('modelSizeSelect').value;
+
+      const btn = document.getElementById('analyzeBtn');
+      const spinner = document.getElementById('btnSpinner');
+      const btnText = document.getElementById('btnText');
+
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnText.textContent = 'CALCULANDO...';
+
+      try {
+        const url = `/api/analyze?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}&pred_len=${predLen}&model_size=${modelSize}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Error al analizar el mercado');
+        }
+        const data = await res.json();
+        lastAnalysisData = data;
+        renderDashboard(data);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'ACTUALIZAR';
+      }
+    }
+
+    function renderDashboard(data) {
+      const k = data.kronos;
+      const modelShort = k.model_used.split('/')[1];
+
+      // Cabecera y Caja Flotante
+      document.getElementById('headerSubInfo').textContent = `${data.symbol} · ${data.interval} · ${data.data_source.split(' ')[0]}`;
+      document.getElementById('liveHeaderTag').textContent = `live · ${modelShort} · ${k.sample_count} samples`;
+
+      document.getElementById('overlayModelTitle').textContent = `${modelShort} · ${k.params_label}`;
+      document.getElementById('overlayContext').textContent = `${k.context_len} candles`;
+      document.getElementById('overlayHorizon').textContent = `next ${k.predicted_candles.length} candles`;
+      document.getElementById('overlaySamples').textContent = `${k.sample_count} futures`;
+      document.getElementById('overlayPathsUp').textContent = `${k.paths_up} / ${k.sample_count}`;
+
+      const regEl = document.getElementById('overlayRegime');
+      regEl.textContent = k.regime;
+      regEl.className = k.regime === 'BULLISH'
+        ? 'font-bold text-emerald-400'
+        : k.regime === 'BEARISH'
+          ? 'font-bold text-rose-400'
+          : 'font-bold text-amber-400';
+
+      // Actualizar Gráfico Interactivo Desplazable
+      updateInteractiveChart(data);
+
+      // Consola Paper Trading (`run_kronos.py` con Red Neuronal Kronos + Filtro Híbrido)
+      const ps = data.paper_sim;
+      const logContainer = document.getElementById('paperLogContainer');
+      if (ps && ps.logs) {
+        logContainer.innerHTML = ps.logs.map(row => {
+          if (row.status === 'skip') {
+            const note = row.side === 'FILTER' ? 'skip [filtro flujo]' : 'skip [choppy]';
+            return `
+              <div class="flex items-center justify-between py-0.5 text-slate-500">
+                <span>${note} &nbsp; ${row.time_label} &nbsp; p_up ${row.p_up}</span>
+                <span>--</span>
+              </div>
+            `;
+          }
+          const isWin = row.status === 'WIN';
+          const statusClass = isWin ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+          const pnlClass = isWin ? 'text-emerald-400' : 'text-rose-400';
+          const sign = row.ret_pct >= 0 ? '+' : '';
+          const pnlSign = row.pnl >= 0 ? '+' : '';
+          return `
+            <div class="flex items-center justify-between py-0.5 border-b border-slate-900/60">
+              <div>
+                <span class="${statusClass} inline-block w-10">${row.status}</span>
+                <span class="text-slate-400">${row.time_label}</span>
+                <span class="text-slate-200 ml-1.5 inline-block w-11">${row.side}</span>
+                <span class="text-slate-400">p_up ${row.p_up}</span>
+              </div>
+              <div class="${pnlClass}">
+                <span>${sign}${row.ret_pct}%</span>
+                <span class="ml-2 font-semibold">${pnlSign}${row.pnl.toFixed(2)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+        document.getElementById('paperSummaryLine').textContent =
+          `híbrido (2/2): ${ps.trades} trades · ${ps.wins} wins · equity $${ps.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        if (ps.raw_equity !== undefined) {
+          document.getElementById('paperRawSummaryLine').textContent =
+            `kronos puro:   ${ps.raw_trades} trades · ${ps.raw_wins} wins · equity $${ps.raw_equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        }
+      }
+
+      // Señal Híbrida
+      const sig = data.signal;
+      const sigActionEl = document.getElementById('signalAction');
+      sigActionEl.textContent = sig.action;
+      const colorMap = {
+        emerald: 'text-emerald-400',
+        green: 'text-emerald-400',
+        rose: 'text-rose-400',
+        red: 'text-rose-400',
+        amber: 'text-amber-400',
+      };
+      sigActionEl.className = `font-mono-num text-lg md:text-xl font-bold ${colorMap[sig.color] || 'text-white'}`;
+      document.getElementById('confidenceBadge').textContent = `CONFIANZA: ${sig.confidence_pct}%`;
+      document.getElementById('signalScoreTag').textContent = `SCORE: ${sig.final_score > 0 ? '+' : ''}${sig.final_score}`;
+
+      document.getElementById('currentPriceVal').textContent = formatPrice(k.last_close);
+      document.getElementById('tpPriceVal').textContent = formatPrice(k.suggested_take_profit);
+      document.getElementById('slPriceVal').textContent = formatPrice(k.suggested_stop_loss);
+
+      // Detector de Trampas de Masa
+      const cleanTrapTitle = sig.trap_title.replace(/^[^\wÁÉÍÓÚáéíóú]+/, '');
+      document.getElementById('trapTitle').textContent = cleanTrapTitle;
+      document.getElementById('trapExplanation').textContent = sig.trap_explanation;
+      document.getElementById('crowdSentimentBadge').textContent = `SENTIMIENTO: ${sig.crowd_sentiment > 0 ? '+' : ''}${sig.crowd_sentiment}`;
+
+      const csig = data.candle_signature;
+      document.getElementById('absorptionVal').textContent = `${csig.absorption_score}%`;
+      document.getElementById('absorptionBar').style.width = `${Math.min(100, csig.absorption_score)}%`;
+      document.getElementById('distributionVal').textContent = `${csig.distribution_score}%`;
+      document.getElementById('distributionBar').style.width = `${Math.min(100, csig.distribution_score)}%`;
+      document.getElementById('volSpikeVal').textContent = `${csig.volume_spike_ratio}x`;
+      document.getElementById('volSpikeBar').style.width = `${Math.min(100, (csig.volume_spike_ratio / 3.0) * 100)}%`;
+
+      // Indicadores Técnicos y Fear & Greed
+      const tv = data.tradingview;
+      document.getElementById('tvRatingBadge').textContent = tv.tv_rating;
+      document.getElementById('tvRsiVal').textContent = tv.rsi;
+      document.getElementById('tvMacdVal').textContent = tv.macd_hist;
+      document.getElementById('tvEma20Val').textContent = formatPrice(tv.ema20);
+      document.getElementById('fgValueBadge').textContent = `${data.fear_greed.value} / 100`;
+
+      const tvList = document.getElementById('tvDetailsList');
+      tvList.innerHTML = tv.details.map(d => `<li class="flex items-center gap-1.5"><span class="text-slate-600">—</span> <span>${d}</span></li>`).join('');
+
+      // Gemelos Históricos
+      const twinsContainer = document.getElementById('historicalTwinsContainer');
+      twinsContainer.innerHTML = data.historical_twins.map(ev => `
+        <div class="quant-subpanel rounded-sm p-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <span class="font-mono-num text-xs font-bold px-2 py-0.5 bg-slate-900 border border-slate-700 text-slate-200 rounded-sm">${ev.date}</span>
+              <span class="font-mono-num text-[11px] uppercase text-slate-400">${ev.category}</span>
+            </div>
+            <span class="font-mono-num text-xs font-semibold text-amber-400">CORRELACIÓN: ${ev.similarity_pct}%</span>
+          </div>
+          <h4 class="text-xs font-semibold text-white mt-2">${ev.title}</h4>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">${ev.lesson}</p>
+          <div class="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-800/70 font-mono-num text-[11px]">
+            <div><span class="text-slate-500">INICIAL:</span> <b class="${ev.initial_move_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${ev.initial_move_pct >= 0 ? '+' : ''}${ev.initial_move_pct}%</b></div>
+            <div><span class="text-slate-500">T+48H:</span> <b class="${ev.aftermath_48h_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${ev.aftermath_48h_pct >= 0 ? '+' : ''}${ev.aftermath_48h_pct}%</b></div>
+            <div><span class="text-slate-500">T+60D:</span> <b class="${ev.aftermath_60d_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${ev.aftermath_60d_pct >= 0 ? '+' : ''}${ev.aftermath_60d_pct}%</b></div>
+          </div>
+        </div>
+      `).join('');
+
+      // Noticias en Vivo
+      const news = data.news;
+      document.getElementById('newsScoreBadge').textContent = `SESGO: ${news.news_sentiment_score > 0 ? '+' : ''}${news.news_sentiment_score}`;
+      const newsContainer = document.getElementById('newsListContainer');
+      newsContainer.innerHTML = (news.articles || []).map(art => {
+        const cleanTag = art.tag.replace(/^[^\wÁÉÍÓÚáéíóú]+/, '');
+        const scoreColor = art.score > 15 ? 'text-emerald-400' : art.score < -15 ? 'text-rose-400' : 'text-slate-400';
+        return `
+          <a href="${art.link}" target="_blank" rel="noopener" class="block quant-subpanel hover:border-slate-600 rounded-sm p-2.5 transition">
+            <div class="flex items-center justify-between font-mono-num text-[10px] mb-1">
+              <span class="uppercase font-semibold ${scoreColor}">${cleanTag}</span>
+              <span class="text-slate-500">${art.source}</span>
+            </div>
+            <div class="text-xs text-slate-200 leading-snug">${art.title}</div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    // Funciones del Puente iPhone
+    async function openIphoneModal() {
+      document.getElementById('iphoneModal').classList.remove('hidden');
+      try {
+        const res = await fetch('/api/iphone');
+        const info = await res.json();
+        document.getElementById('iphoneUrlText').textContent = info.iphone_url;
+        document.getElementById('qrWebAppImg').src =
+          `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(info.iphone_url)}`;
+        document.getElementById('ntfyTopicInput').value = info.config.ntfy_topic || '';
+        document.getElementById('tgTokenInput').value = info.config.telegram_bot_token || '';
+        document.getElementById('tgChatInput').value = info.config.telegram_chat_id || '';
+        document.getElementById('autoPushToggle').checked = !!info.config.auto_push_on_signal;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function closeIphoneModal() {
+      document.getElementById('iphoneModal').classList.add('hidden');
+    }
+
+    async function saveIphoneSettings() {
+      const payload = {
+        ntfy_topic: document.getElementById('ntfyTopicInput').value,
+        telegram_bot_token: document.getElementById('tgTokenInput').value,
+        telegram_chat_id: document.getElementById('tgChatInput').value,
+        auto_push_on_signal: document.getElementById('autoPushToggle').checked,
+      };
+      const res = await fetch('/api/iphone/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        document.getElementById('pushStatusMsg').textContent = '✓ Configuración guardada correctamente.';
+      }
+    }
+
+    async function sendCurrentAlertToIphone() {
+      if (!lastAnalysisData) return;
+      const msgEl = document.getElementById('pushStatusMsg');
+      if (msgEl) msgEl.textContent = 'Enviando notificación Push al iPhone...';
+
+      await saveIphoneSettings();
+
+      const k = lastAnalysisData.kronos;
+      const sig = lastAnalysisData.signal;
+      const payload = {
+        symbol: lastAnalysisData.symbol,
+        interval: lastAnalysisData.interval,
+        action: sig.action,
+        price: formatPrice(k.last_close),
+        pred_close: formatPrice(k.predicted_final_close),
+        ret_pct: k.expected_return_pct,
+        tp: formatPrice(k.suggested_take_profit),
+        sl: formatPrice(k.suggested_stop_loss),
+        regime: k.regime,
+        p_up: k.p_up,
+        trap_title: sig.trap_title,
+      };
+
+      const res = await fetch('/api/iphone/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const out = await res.json();
+      if (out.ntfy_sent || out.telegram_sent) {
+        if (msgEl) {
+          msgEl.className = 'text-[11px] font-mono-num text-center text-emerald-400';
+          msgEl.textContent = `✓ Alerta enviada al canal '${out.topic}'. ¡Mira tu iPhone!`;
+        } else {
+          alert(`Alerta enviada a tu iPhone (Canal: ${out.topic})`);
+        }
+      } else {
+        if (msgEl) {
+          msgEl.className = 'text-[11px] font-mono-num text-center text-rose-400';
+          msgEl.textContent = 'Error al enviar alerta. Verifica tu conexión.';
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initInteractiveChart();
+      runAnalysis();
+    });
+  </script>
+</body>
+</html>

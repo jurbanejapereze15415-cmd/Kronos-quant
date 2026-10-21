@@ -1,0 +1,12 @@
+numpy
+pandas
+torch>=2.1.0
+einops
+huggingface_hub
+safetensors
+tqdm
+fastapi
+uvicorn
+requests
+feedparser
+yfinance
